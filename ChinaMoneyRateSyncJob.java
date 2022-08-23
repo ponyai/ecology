@@ -18,8 +18,6 @@ import weaver.conn.RecordSet;
 import weaver.integration.logging.Logger;
 import weaver.integration.logging.LoggerFactory;
 
-// Referenced classes of package weaver.interfaces.schedule:
-// BaseCronJob
 /**
  * 
  * @author youcheng wu ponyai
@@ -31,19 +29,17 @@ public class ChinaMoneyRateSyncJob extends BaseCronJob {
         logger = LoggerFactory.getLogger(getClass());
         fmt1 = new SimpleDateFormat("yyyy-MM-dd");
         fmt2 = new SimpleDateFormat("HH:mm:ss");
-        curDateStr = fmt1.format(new Date());
-        curTimeStr = fmt2.format(new Date());
         insertSql = "insert into uf_china_rate(cxrq,bz,hl,formmodeid,modedatacreater,modedatacreatertype,modedatacreatedate,modedatacreatetime,modeuuid) values(?,?,?,2,22,0,?,?,?)";
         head = "https://www.chinamoney.com.cn/ags/ms/cm-u-bk-ccpr/CcprHisNew?pageNum=1&pageSize=100&startDate=";
     }
  
-    public static void main(String[] args) {
-        //
-    }
 
     public void execute() {
+        //时间
+        curDateStr = fmt1.format(new Date());
+        curTimeStr = fmt2.format(new Date());
         long l = System.currentTimeMillis();
-        logger.info((new StringBuilder()).append("同步汇率定时任务开始>>>>>>>>(")
+        logger.info((new StringBuilder()).append("ChinaMoneyRateSyncJob>>>>>>>>(")
                 .append(getClass().getName()).append(")  start").toString());
         try {
             String[] currencys= {"USD/CNY","HKD/CNY","100JPY/CNY"};
@@ -51,10 +47,10 @@ public class ChinaMoneyRateSyncJob extends BaseCronJob {
                 saveData(currency);
             }
         } catch (Exception e) {
-            logger.error("同步汇率定时任务发生非预期异常",e);
+            logger.error("ChinaMoneyRateSyncJob execute error:",e);
         } 
         logger.info((new StringBuilder()).append(
-                "同步汇率定时任务结束>>>>>>>>(")
+                "ChinaMoneyRateSyncJob >>>>>>>>(")
                 .append(getClass().getName()).append(")  end ")
                 .append(System.currentTimeMillis() - l).toString());
     }
@@ -62,13 +58,13 @@ public class ChinaMoneyRateSyncJob extends BaseCronJob {
     private void saveData(String currency) throws Exception {
         String usdResult =callHttpGet(currency);
         if(StringUtil.isEmpty(usdResult)) {
-            logger.info("调用汇率查询接口返回结果为空");
+            logger.error("chinarate interface return null");
             return;
         }
         JSONObject resultJson=JSONObject.parseObject(usdResult);
         String records= resultJson.getString("records");
         if(StringUtil.isEmpty(records)) {
-            logger.info("费率查询结果为空");
+            logger.error("chinarate interface return records null");
             return;
         }
         JSONArray recordArray=JSONObject.parseArray(records);
@@ -77,14 +73,13 @@ public class ChinaMoneyRateSyncJob extends BaseCronJob {
         JSONArray valueArray=JSONObject.parseArray(values);
         BigDecimal rate=valueArray.getBigDecimal(0);
         if(null==rate) {
-            logger.info("费率为空");
+            logger.error("chinarate interface return rate null");
             return;
         }
-        System.out.println("今日"+currency+"汇率为"+rate);
         RecordSet recordset = new RecordSet();
         String uuid = UUID.randomUUID().toString();
         Boolean successFlag=recordset.executeUpdate(insertSql,curDateStr,currency,rate,curDateStr,curTimeStr,uuid);
-        logger.info("保存chinamoney_rate表汇率数据结束"+successFlag);
+        logger.info("save chinamoney_rate data end"+successFlag);
     }
     
    
@@ -94,7 +89,6 @@ public class ChinaMoneyRateSyncJob extends BaseCronJob {
         String curStr="&currency="+currency;
         sb.append(head).append(curDateStr).append(endDatestr).append(curStr);
         URL url = new URL(sb.toString());
-        logger.info("汇率查询URL:\n"+sb.toString());
         HttpURLConnection connect = (HttpURLConnection) url.openConnection();
         connect.setRequestMethod("GET");
         connect.connect();
@@ -106,8 +100,7 @@ public class ChinaMoneyRateSyncJob extends BaseCronJob {
         while ((str = br.readLine()) != null){
             result += str;
         }
-        logger.info("汇率查询返回结果:\n"+result);
-        
+        logger.info("chinarate interface callresult:\n"+result);
         //关闭流
         is.close();
         //断开连接，disconnect是在底层tcp socket链接空闲时才切断，如果正在被其他线程使用就不切断。
