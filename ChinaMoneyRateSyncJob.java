@@ -42,7 +42,7 @@ public class ChinaMoneyRateSyncJob extends BaseCronJob {
         logger.info((new StringBuilder()).append("ChinaMoneyRateSyncJob>>>>>>>>(")
                 .append(getClass().getName()).append(")  start").toString());
         try {
-            String[] currencys= {"USD/CNY","HKD/CNY","100JPY/CNY"};
+            String[] currencys= {"USD/CNY","HKD/CNY","100JPY/CNY","CNY/AED","EUR/CNY"};
             for (String currency : currencys) {
                 saveData(currency);
             }
